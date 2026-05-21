@@ -2,42 +2,55 @@ package ec.org.cedia.smartinventory.controller;
 
 import java.util.List;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import ec.org.cedia.smartinventory.model.Product;
+import ec.org.cedia.smartinventory.dto.ProductRequestDTO;
+import ec.org.cedia.smartinventory.dto.ProductResponseDTO;
+import ec.org.cedia.smartinventory.service.ProductService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
-@RequestMapping("/api/products")
+@RequestMapping("/products")
+@RequiredArgsConstructor
 public class ProductController {
 
-    // Datos en memoria — temporal, solo para esta sesión
-    private final List<Product> products = List.of(
-        Product.builder().id(1L).name("Laptop")
-            .description("Laptop de alto rendimiento")
-            .price(1200.0).stock(10).active(true).build(),
-        Product.builder().id(2L).name("Mouse")
-            .description("Mouse inalámbrico")
-            .price(25.5).stock(50).active(true).build(),
-        Product.builder().id(3L).name("Teclado")
-            .description("Teclado mecánico")
-            .price(45.0).stock(30).active(true).build()
-    );
+    private final ProductService productService;
 
-    // GET /api/products
-    @GetMapping
-    public List<Product> listar() {
-        return products;
+    @PostMapping
+    public ResponseEntity<ProductResponseDTO> crearProducto(
+            @Valid @RequestBody ProductRequestDTO request) {
+        return ResponseEntity.status(201).body(productService.crearProducto(request));
     }
 
-    // GET /api/products/{id}
+    @GetMapping
+    public ResponseEntity<List<ProductResponseDTO>> listarProductos() {
+        return ResponseEntity.ok(productService.listarProductos());
+    }
+
     @GetMapping("/{id}")
-    public Product buscarPorId(@PathVariable Long id) {
-        return products.stream()
-            .filter(p -> p.getId().equals(id))
-            .findFirst()
-            .orElse(null);
+    public ResponseEntity<ProductResponseDTO> obtenerProducto(@PathVariable Long id) {
+        return ResponseEntity.ok(productService.obtenerProducto(id));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ProductResponseDTO> actualizarProducto(
+            @PathVariable Long id,
+            @Valid @RequestBody ProductRequestDTO request) {
+        return ResponseEntity.ok(productService.actualizarProducto(id, request));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminarProducto(@PathVariable Long id) {
+        productService.eliminarProducto(id);
+        return ResponseEntity.noContent().build();
     }
 }
