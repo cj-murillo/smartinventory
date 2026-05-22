@@ -12,12 +12,21 @@ import ec.org.cedia.smartinventory.model.Product;
 import ec.org.cedia.smartinventory.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Esta clase se encarga de gestionar las operaciones matemáticas básicas.
+ */
 @Service
 @RequiredArgsConstructor
 public class ProductService {
 
     private final ProductRepository productRepository;
 
+    /**
+     * Crea un nuevo producto en el inventario.
+     * 
+     * @param request El objeto que contiene los datos del producto a crear.
+     * @return El producto creado con su ID asignado.
+     */
     public ProductResponseDTO crearProducto(ProductRequestDTO request) {
         Product product = Product.builder()
                 .name(request.getName())
