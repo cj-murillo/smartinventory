@@ -22,6 +22,13 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(org.springframework.http.HttpMethod.GET,
                     "/products", "/health").permitAll()
+                    .requestMatchers(
+    "/swagger-ui.html",
+                "/swagger-ui/**",
+                "/v3/api-docs",
+                "/v3/api-docs/**",
+                "/swagger-ui/index.html"
+            ).permitAll()
                 .anyRequest().authenticated()
             )
             .httpBasic(basic -> {});

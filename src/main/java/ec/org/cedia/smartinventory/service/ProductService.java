@@ -1,8 +1,7 @@
 package ec.org.cedia.smartinventory.service;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import ec.org.cedia.smartinventory.dto.ProductRequestDTO;
@@ -11,10 +10,12 @@ import ec.org.cedia.smartinventory.exception.ResourceNotFoundException;
 import ec.org.cedia.smartinventory.model.Product;
 import ec.org.cedia.smartinventory.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Esta clase se encarga de gestionar las operaciones matemáticas básicas.
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProductService {
@@ -38,11 +39,9 @@ public class ProductService {
         return toResponseDTO(productRepository.save(product));
     }
 
-    public List<ProductResponseDTO> listarProductos() {
-        return productRepository.findAll()
-                .stream()
-                .map(this::toResponseDTO)
-                .collect(Collectors.toList());
+    public Page<ProductResponseDTO> listarProductos(Pageable pageable) {
+        log.debug("Listando — página={}, tamaño={}", pageable.getPageNumber(), pageable.getPageSize());
+        return productRepository.findAll(pageable).map(this::toResponseDTO);
     }
 
     public ProductResponseDTO obtenerProducto(Long id) {
