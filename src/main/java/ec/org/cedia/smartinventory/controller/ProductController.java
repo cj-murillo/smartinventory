@@ -2,7 +2,7 @@ package ec.org.cedia.smartinventory.controller;
 
 import ec.org.cedia.smartinventory.dto.ProductRequestDTO;
 import ec.org.cedia.smartinventory.dto.ProductResponseDTO;
-import ec.org.cedia.smartinventory.service.ProductService;
+import ec.org.cedia.smartinventory.service.ProductUseCase;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Productos", description = "Gestión del catálogo de productos de SmartInventory")
 public class ProductController {
 
-    private final ProductService productService;
+    private final ProductUseCase productService;
 
     @Operation(summary = "Listar productos", description = "Retorna todos los productos con paginación")
     @ApiResponses({ @ApiResponse(responseCode = "200", description = "Lista obtenida correctamente") })

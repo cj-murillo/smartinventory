@@ -18,7 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ProductService {
+public class ProductService implements ProductUseCase {
 
     private final ProductRepository productRepository;
 
@@ -28,6 +28,7 @@ public class ProductService {
      * @param request El objeto que contiene los datos del producto a crear.
      * @return El producto creado con su ID asignado.
      */
+    @Override
     public ProductResponseDTO crearProducto(ProductRequestDTO request) {
         Product product = Product.builder()
                 .name(request.getName())
@@ -39,17 +40,20 @@ public class ProductService {
         return toResponseDTO(productRepository.save(product));
     }
 
+    @Override
     public Page<ProductResponseDTO> listarProductos(Pageable pageable) {
         log.debug("Listando — página={}, tamaño={}", pageable.getPageNumber(), pageable.getPageSize());
         return productRepository.findAll(pageable).map(this::toResponseDTO);
     }
 
+    @Override
     public ProductResponseDTO obtenerProducto(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con id: " + id));
         return toResponseDTO(product);
     }
 
+    @Override
     public ProductResponseDTO actualizarProducto(Long id, ProductRequestDTO request) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado con id: " + id));
@@ -60,6 +64,7 @@ public class ProductService {
         return toResponseDTO(productRepository.save(product));
     }
 
+    @Override
     public void eliminarProducto(Long id) {
         if (!productRepository.existsById(id)) {
             throw new ResourceNotFoundException("Producto no encontrado con id: " + id);

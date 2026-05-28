@@ -21,7 +21,10 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(org.springframework.http.HttpMethod.GET,
-                    "/products", "/products/**", "/health").permitAll()
+                    "/products", "/products/**", "/health", "/mcp").permitAll()
+                .requestMatchers(
+                    "/mcp"
+                ).permitAll()
                 .requestMatchers(
                     "/swagger-ui.html",
                     "/swagger-ui/**",
