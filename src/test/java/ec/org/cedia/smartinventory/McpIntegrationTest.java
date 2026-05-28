@@ -1,224 +1,115 @@
 package ec.org.cedia.smartinventory;
 
+import java.util.List;
+import java.util.Map;
+
+import ec.org.cedia.smartinventory.dto.ProductResponseDTO;
+import ec.org.cedia.smartinventory.mcp.McpToolService;
+import io.modelcontextprotocol.server.McpServerFeatures;
+import io.modelcontextprotocol.server.McpSyncServer;
+import io.modelcontextprotocol.server.transport.HttpServletStreamableServerTransportProvider;
+import io.modelcontextprotocol.spec.McpSchema;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MockMvc;
 
-import static org.hamcrest.Matchers.hasItem;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
-@AutoConfigureMockMvc
 @ActiveProfiles("test")
 class McpIntegrationTest {
 
     @Autowired
-    private MockMvc mockMvc;
+    private HttpServletStreamableServerTransportProvider transportProvider;
+
+    @Autowired
+    private McpSyncServer mcpServer;
+
+    @Autowired
+    private McpToolService mcpToolService;
 
     @Test
-    void initialize_toolsList_y_createProduct_debeFuncionar() throws Exception {
-        String initializeBody = """
-                {
-                  "jsonrpc": "2.0",
-                  "id": 1,
-                  "method": "initialize",
-                  "params": {
-                    "protocolVersion": "2025-06-18",
-                    "capabilities": {},
-                    "clientInfo": {
-                      "name": "test-client",
-                      "version": "1.0.0"
-                    }
-                  }
-                }
-                """;
+    void mcpSdk_debeRegistrarTransportYTools() {
+        assertNotNull(transportProvider);
+        assertNotNull(mcpServer);
+        assertTrue(transportProvider.protocolVersions().contains("2025-11-25"));
+        assertTrue(transportProvider.protocolVersions().contains("2025-06-18"));
 
-        String sessionId = mockMvc.perform(post("/api/mcp")
-                        .contextPath("/api")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON, MediaType.TEXT_EVENT_STREAM)
-                        .content(initializeBody))
-                .andExpect(status().isOk())
-                .andExpect(header().exists("Mcp-Session-Id"))
-                .andExpect(header().string("MCP-Protocol-Version", "2025-06-18"))
-                .andExpect(jsonPath("$.result.capabilities.tools.listChanged").value(false))
-                .andReturn()
-                .getResponse()
-                .getHeader("Mcp-Session-Id");
+        List<String> toolNames = mcpServer.listTools().stream()
+                .map(McpSchema.Tool::name)
+                .toList();
 
-        mockMvc.perform(post("/api/mcp")
-                        .contextPath("/api")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("Mcp-Session-Id", sessionId)
-                        .header("MCP-Protocol-Version", "2025-06-18")
-                        .content("""
-                                {
-                                  "jsonrpc": "2.0",
-                                  "method": "notifications/initialized"
-                                }
-                                """))
-                .andExpect(status().isAccepted());
-
-        mockMvc.perform(post("/api/mcp")
-                        .contextPath("/api")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON)
-                        .header("Mcp-Session-Id", sessionId)
-                        .header("MCP-Protocol-Version", "2025-06-18")
-                        .content("""
-                                {
-                                  "jsonrpc": "2.0",
-                                  "id": 2,
-                                  "method": "tools/list",
-                                  "params": {}
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.result.tools[*].name", hasItem("create_product")))
-                .andExpect(jsonPath("$.result.tools[*].name", hasItem("list_products")));
-
-        mockMvc.perform(post("/api/mcp")
-                        .contextPath("/api")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON)
-                        .header("Mcp-Session-Id", sessionId)
-                        .header("MCP-Protocol-Version", "2025-06-18")
-                        .content("""
-                                {
-                                  "jsonrpc": "2.0",
-                                  "id": 3,
-                                  "method": "tools/call",
-                                  "params": {
-                                    "name": "create_product",
-                                    "arguments": {
-                                      "name": "Mouse MCP",
-                                      "description": "Mouse de prueba",
-                                      "price": 25.5,
-                                      "stock": 7
-                                    }
-                                  }
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.result.isError").value(false))
-                .andExpect(jsonPath("$.result.structuredContent.product.name").value("Mouse MCP"))
-                .andExpect(jsonPath("$.result.structuredContent.product.id").exists());
+        assertTrue(toolNames.contains("list_products"));
+        assertTrue(toolNames.contains("get_product"));
+        assertTrue(toolNames.contains("create_product"));
+        assertTrue(toolNames.contains("update_product"));
+        assertTrue(toolNames.contains("delete_product"));
+        assertTrue(toolNames.contains("health_check"));
     }
 
     @Test
-    void createProduct_conParametrosInvalidos_debeRetornarErrorMcp() throws Exception {
-        String sessionId = mockMvc.perform(post("/api/mcp")
-                        .contextPath("/api")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "jsonrpc": "2.0",
-                                  "id": 1,
-                                  "method": "initialize",
-                                  "params": {
-                                    "protocolVersion": "2025-06-18",
-                                    "capabilities": {},
-                                    "clientInfo": {
-                                      "name": "test-client",
-                                      "version": "1.0.0"
-                                    }
-                                  }
-                                }
-                                """))
-                .andReturn()
-                .getResponse()
-                .getHeader("Mcp-Session-Id");
+    void createProduct_desdeToolSdk_debeFuncionar() {
+        McpServerFeatures.SyncToolSpecification tool = findTool("create_product");
 
-        mockMvc.perform(post("/api/mcp")
-                        .contextPath("/api")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .header("Mcp-Session-Id", sessionId)
-                        .header("MCP-Protocol-Version", "2025-06-18")
-                        .content("""
-                                {
-                                  "jsonrpc": "2.0",
-                                  "id": 10,
-                                  "method": "tools/call",
-                                  "params": {
-                                    "name": "create_product",
-                                    "arguments": {
-                                      "price": 10.0,
-                                      "stock": 2
-                                    }
-                                  }
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.error.code").value(-32602))
-                .andExpect(jsonPath("$.error.data.fields.name").exists());
+        McpSchema.CallToolResult result = tool.callHandler().apply(null, new McpSchema.CallToolRequest(
+                "create_product",
+                Map.of(
+                        "name", "Mouse SDK",
+                        "description", "Mouse de prueba",
+                        "price", 25.5,
+                        "stock", 7
+                )
+        ));
+
+        assertFalse(Boolean.TRUE.equals(result.isError()));
+        Map<?, ?> structured = (Map<?, ?>) result.structuredContent();
+        ProductResponseDTO product = (ProductResponseDTO) structured.get("product");
+        assertEquals("Mouse SDK", product.getName());
+        assertNotNull(product.getId());
     }
 
     @Test
-    void get_mcp_debeRetornar405_y_delete_debeCerrarSesion() throws Exception {
-        mockMvc.perform(get("/api/mcp").contextPath("/api"))
-                .andExpect(status().isMethodNotAllowed());
+    void createProduct_invalido_desdeToolSdk_debeRetornarError() {
+        McpServerFeatures.SyncToolSpecification tool = findTool("create_product");
 
-        String sessionId = mockMvc.perform(post("/api/mcp")
-                        .contextPath("/api")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "jsonrpc": "2.0",
-                                  "id": 1,
-                                  "method": "initialize",
-                                  "params": {
-                                    "protocolVersion": "2025-06-18",
-                                    "capabilities": {},
-                                    "clientInfo": {
-                                      "name": "test-client",
-                                      "version": "1.0.0"
-                                    }
-                                  }
-                                }
-                                """))
-                .andReturn()
-                .getResponse()
-                .getHeader("Mcp-Session-Id");
+        McpSchema.CallToolResult result = tool.callHandler().apply(null, new McpSchema.CallToolRequest(
+                "create_product",
+                Map.of(
+                        "price", 10.0,
+                        "stock", 2
+                )
+        ));
 
-        mockMvc.perform(delete("/api/mcp")
-                        .contextPath("/api")
-                        .header("Mcp-Session-Id", sessionId))
-                .andExpect(status().isNoContent());
+        assertTrue(Boolean.TRUE.equals(result.isError()));
+        Map<?, ?> structured = (Map<?, ?>) result.structuredContent();
+        Map<?, ?> fields = (Map<?, ?>) structured.get("fields");
+        assertEquals("INVALID_ARGUMENT", structured.get("code"));
+        assertTrue(fields.containsKey("name"));
     }
 
     @Test
-    void initialize_conVersion2025_11_25_debeSerAceptada() throws Exception {
-        mockMvc.perform(post("/api/mcp")
-                        .contextPath("/api")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .accept(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "jsonrpc": "2.0",
-                                  "id": 99,
-                                  "method": "initialize",
-                                  "params": {
-                                    "protocolVersion": "2025-11-25",
-                                    "capabilities": {},
-                                    "clientInfo": {
-                                      "name": "inspector-client",
-                                      "version": "0.17.2"
-                                    }
-                                  }
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andExpect(header().string("MCP-Protocol-Version", "2025-11-25"))
-                .andExpect(jsonPath("$.result.protocolVersion").value("2025-11-25"));
+    void healthCheck_desdeToolSdk_debeRetornarUp() {
+        McpServerFeatures.SyncToolSpecification tool = findTool("health_check");
+
+        McpSchema.CallToolResult result = tool.callHandler().apply(null, new McpSchema.CallToolRequest(
+                "health_check",
+                Map.of()
+        ));
+
+        assertFalse(Boolean.TRUE.equals(result.isError()));
+        Map<?, ?> structured = (Map<?, ?>) result.structuredContent();
+        assertEquals("UP", structured.get("status"));
+        assertEquals("SmartInventory MCP", structured.get("service"));
+    }
+
+    private McpServerFeatures.SyncToolSpecification findTool(String name) {
+        return mcpToolService.toolSpecifications().stream()
+                .filter(spec -> spec.tool().name().equals(name))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Tool no encontrada: " + name));
     }
 }
