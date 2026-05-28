@@ -3,6 +3,8 @@ package ec.org.cedia.smartinventory.controller;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,12 +50,12 @@ class ProductControllerTest {
     // ════════════════════════════════════════════════════
     @Test
     void listarProductos_sinAuth_debeRetornar200() throws Exception {
-        when(productService.listarProductos()).thenReturn(List.of());
+        when(productService.listarProductos(any(Pageable.class))).thenReturn(new PageImpl<>(List.of()));
 
         mockMvc.perform(get("/products"))
             .andExpect(status().isOk())
             .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$").isArray());
+            .andExpect(jsonPath("$.content").isArray());
     }
 
     // ════════════════════════════════════════════════════

@@ -12,7 +12,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
-@RequestMapping("/api/health")
+@RequestMapping("/health")
 @Tag(name = "Health", description = "Estado del servicio")
 public class HealthController {
 
